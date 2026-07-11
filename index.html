@@ -20,8 +20,9 @@
         <span class="logo-tagline">Estética y Cosméticos</span>
       </div>
     </div>
-    <button class="cart-btn" onclick="openCart()">
-      🛍️ <span class="cart-label">Carrito</span>
+    <button class="cart-btn" onclick="openCart()" aria-label="Ver carrito">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span class="cart-label">Carrito</span>
       <span class="cart-count" id="cartCount">0</span>
     </button>
   </div>
@@ -34,7 +35,6 @@
   <div class="hero-divider"></div>
 </section>
 
-<!-- Búsqueda -->
 <div class="search-wrap">
   <div class="search-box">
     <span class="search-icon">
@@ -47,23 +47,43 @@
   </div>
 </div>
 
-<!-- Categorías padre -->
 <div class="tabs" id="tabs"></div>
+<div class="filter-bar">
+  <button type="button" class="filter-trigger" id="filterTrigger" aria-label="Abrir filtros" aria-haspopup="dialog">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+    Filtros
+    <span class="filter-badge" id="filterBadge"></span>
+  </button>
+  <div class="filter-chips" id="filterChips"></div>
+</div>
 
-<!-- Subcategorías (se muestra solo cuando hay padre seleccionado) -->
-<div class="subcats" id="subcats"></div>
+<div class="filter-overlay" id="filterOverlay"></div>
+<div class="filter-sheet" id="filterSheet" role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle">
+  <div class="filter-sheet-handle"></div>
+  <div class="filter-sheet-head">
+    <h3 id="filterSheetTitle">Filtros</h3>
+    <button class="filter-sheet-close" id="filterSheetClose" aria-label="Cerrar filtros">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="filter-sheet-body" id="filterSheetBody"></div>
+  <div class="filter-sheet-foot">
+    <button class="filter-sheet-clear" id="filterSheetClear">Limpiar</button>
+    <button class="filter-sheet-apply" id="filterSheetApply">Aplicar</button>
+  </div>
+</div>
 
-<!-- Marcas (se muestra cuando hay marcas disponibles) -->
-<div class="brand-bar" id="brands"></div>
-
-<div id="stateMsg" class="state-msg">Cargando catálogo…</div>
+<div id="stateMsg" class="state-msg"></div>
 <div class="grid" id="grid"></div>
 
+<!-- Overlay + Carrito -->
 <div class="overlay" id="overlay" onclick="closeCart()"></div>
 <aside class="drawer" id="drawer">
   <div class="drawer-head">
     <h2>Tu pedido</h2>
-    <button class="close-btn" onclick="closeCart()" aria-label="Cerrar carrito">✕</button>
+    <button class="close-btn" onclick="closeCart()" aria-label="Cerrar carrito">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
   </div>
   <div class="drawer-items" id="drawerItems"></div>
   <div class="drawer-foot">
@@ -77,6 +97,18 @@
     <p class="foot-note">Se abrirá WhatsApp con tu pedido listo para enviar</p>
   </div>
 </aside>
+
+<!-- Barra flotante (aparece cuando hay productos en el carrito) -->
+<div class="cart-bar" id="cartBar">
+  <div class="cart-bar-info">
+    <span class="cart-bar-count" id="cartBarCount">0 productos</span>
+    <span class="cart-bar-total" id="cartBarTotal">$0</span>
+  </div>
+  <button type="button" class="cart-bar-btn" onclick="openCart()">Ver pedido →</button>
+</div>
+
+<!-- Notificación al agregar -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <footer>Denis Beauty · Hecho con cariño para tu ritual de belleza</footer>
 
