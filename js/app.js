@@ -24,9 +24,10 @@ let activeSub   = "Todas";
 let activeBrand = "Todas";
 let draftSub    = "Todas";
 let draftBrand  = "Todas";
-let searchQuery = "";
-let searchTimer = null;
-let toastTimer  = null;
+let searchQuery  = "";
+let searchTimer  = null;
+let toastTimer   = null;
+let cartBarTimer = null;
 
 /* ============================================================
    Carga de catálogo
@@ -402,6 +403,7 @@ function addToCart(id) {
   cart[id] = (cart[id] || 0) + 1;
   updateProductButton(id);
   updateCart();
+  flashCartBar();
   animateCartCount();
   const p = PRODUCTS.find(p => p.id == id);
   showToast(isNew ? `${escapeHtml(p.name)} agregado al pedido` : `${cart[id]} × ${escapeHtml(p.name)}`);
@@ -412,7 +414,7 @@ function changeQty(id, delta) {
   if (cart[id] <= 0) delete cart[id];
   updateProductButton(id);
   updateCart();
-  if (delta > 0) animateCartCount();
+  if (delta > 0) { animateCartCount(); flashCartBar(); }
 }
 
 function updateCart() {
@@ -462,16 +464,25 @@ function updateCart() {
    ============================================================ */
 function updateCartBar(ids, count, total) {
   const bar = document.getElementById('cartBar');
+
   if (!ids || ids.length === 0) {
+    clearTimeout(cartBarTimer);
     bar.classList.remove('visible');
     document.body.classList.remove('has-cart');
     return;
   }
+
   document.body.classList.add('has-cart');
   document.getElementById('cartBarCount').textContent =
     `${count} ${count === 1 ? 'producto' : 'productos'}`;
   document.getElementById('cartBarTotal').textContent = CURRENCY + total.toLocaleString('es');
+}
+
+function flashCartBar() {
+  const bar = document.getElementById('cartBar');
   bar.classList.add('visible');
+  clearTimeout(cartBarTimer);
+  cartBarTimer = setTimeout(() => bar.classList.remove('visible'), 3000);
 }
 
 /* ============================================================
