@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Denis Beauty — Tienda</title>
+  <link rel="icon" type="image/png" href="Logo D.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="logo">
+      <img src="Logo D.png" alt="">
+      <div class="logo-text">
+        <span class="logo-name">Denis <span>Beauty</span></span>
+        <span class="logo-tagline">Estética y Cosméticos</span>
+      </div>
+    </div>
+    <button class="cart-btn" onclick="openCart()">
+      🛍️ <span class="cart-label">Carrito</span>
+      <span class="cart-count" id="cartCount">0</span>
+    </button>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Ritual de belleza diario</span>
+  <h1>Piel y color que <em>hablan</em> por ti</h1>
+  <p>Elegí tus productos favoritos y armá tu pedido. Te conectamos directo por WhatsApp para confirmar disponibilidad, pago y envío.</p>
+  <div class="hero-divider"></div>
+</section>
+
+<!-- Búsqueda -->
+<div class="search-wrap">
+  <div class="search-box">
+    <span class="search-icon">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+    </span>
+    <input type="search" id="searchInput" class="search-input"
+      placeholder="Buscar productos, marcas, categorías…" autocomplete="off">
+  </div>
+</div>
+
+<!-- Categorías padre -->
+<div class="tabs" id="tabs"></div>
+
+<!-- Subcategorías (se muestra solo cuando hay padre seleccionado) -->
+<div class="subcats" id="subcats"></div>
+
+<!-- Marcas (se muestra cuando hay marcas disponibles) -->
+<div class="brand-bar" id="brands"></div>
+
+<div id="stateMsg" class="state-msg">Cargando catálogo…</div>
+<div class="grid" id="grid"></div>
+
+<div class="overlay" id="overlay" onclick="closeCart()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2>Tu pedido</h2>
+    <button class="close-btn" onclick="closeCart()" aria-label="Cerrar carrito">✕</button>
+  </div>
+  <div class="drawer-items" id="drawerItems"></div>
+  <div class="drawer-foot">
+    <div class="total-row">
+      <span>Total</span>
+      <span id="totalPrice">$0</span>
+    </div>
+    <button class="wa-btn" id="waBtn" onclick="checkoutWhatsApp()">
+      Finalizar pedido por WhatsApp
+    </button>
+    <p class="foot-note">Se abrirá WhatsApp con tu pedido listo para enviar</p>
+  </div>
+</aside>
+
+<footer>Denis Beauty · Hecho con cariño para tu ritual de belleza</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>
