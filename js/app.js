@@ -7,11 +7,39 @@ const WHATSAPP_NUMBER = "573234467829";
 const CURRENCY        = "$";
 const SHEET_JSON_URL  = "https://opensheet.elk.sh/1XQ3SUg4jFQmLmvdR_kkS2UuQGAqoJ6PUepjsT2ijtH4/1";
 
+/* Pestaña opcional del mismo Google Sheet para ordenar las categorías sin
+   tocar código: creá una pestaña llamada "categorias" con las columnas
+   `categoria | orden` (orden = 1, 2, 3... el número más bajo aparece
+   primero). Si la pestaña no existe todavía, se usa CATEGORY_ORDER de
+   abajo como respaldo — nada se rompe mientras tanto. */
+const CATEGORY_ORDER_URL = "https://opensheet.elk.sh/1XQ3SUg4jFQmLmvdR_kkS2UuQGAqoJ6PUepjsT2ijtH4/categorias";
+
+/* Respaldo: se usa solo para categorías que no estén en la pestaña
+   "categorias" (o mientras esa pestaña no exista). Reordená esta lista
+   como quieras. Las categorías no listadas acá tampoco desaparecen: van
+   al final, en el orden en que aparecen en el catálogo. */
+const CATEGORY_ORDER = [
+  "Cuidado Capilar",
+  "Maquillaje",
+  "Uñas",
+  "Accesorios",
+  "Skin Care",
+  "Barberia",
+];
+
 const SVG_FALLBACK = `<svg class="product-fallback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`;
 
 /*
-  Columnas del Google Sheet (fila 1):
-  id | nombre | categoria | subcategoria | marca | precio | foto
+  Columnas del Google Sheet, pestaña de productos (fila 1):
+  id | nombre | categoria | subcategoria | marca | precio | foto | activo | prioridad
+
+  "activo" es opcional: dejala vacía o escribí "true" para mostrar el
+  producto; escribí "false" (o "no" / "0" / "inactivo") para ocultarlo
+  sin borrar la fila.
+
+  "prioridad" es opcional: escribí 1 en el producto que querés que
+  aparezca primero, 2 en el segundo, etc. Los productos sin número
+  quedan después, en su orden habitual.
 */
 
 /* ============================================================
@@ -28,6 +56,9 @@ let searchQuery  = "";
 let searchTimer  = null;
 let toastTimer   = null;
 let cartBarTimer = null;
+let brandSearchQuery = "";
+let currentBrandOptions = [];
+let categoryOrderMap = new Map();
 
 /* ============================================================
    Carga de catálogo
@@ -46,6 +77,31 @@ function renderSkeleton(count) {
   return Array(count).fill(card).join('');
 }
 
+function rowGetter(row) {
+  return key => {
+    const found = Object.keys(row).find(k => k.trim().toLowerCase() === key);
+    return found ? String(row[found]).trim() : "";
+  };
+}
+
+async function loadCategoryOrder() {
+  const map = new Map();
+  try {
+    const res = await fetch(CATEGORY_ORDER_URL, { cache: "no-store" });
+    if (!res.ok) return map;
+    const rows = await res.json();
+    rows.forEach(row => {
+      const get = rowGetter(row);
+      const cat = get('categoria');
+      const ord = Number(get('orden'));
+      if (cat) map.set(cat, Number.isFinite(ord) ? ord : Infinity);
+    });
+  } catch (err) {
+    /* la pestaña "categorias" no existe todavía — se usa CATEGORY_ORDER como respaldo */
+  }
+  return map;
+}
+
 async function loadProducts() {
   const stateMsg = document.getElementById('stateMsg');
   const grid     = document.getElementById('grid');
@@ -53,15 +109,20 @@ async function loadProducts() {
   grid.innerHTML = renderSkeleton(8);
 
   try {
-    const res = await fetch(SHEET_JSON_URL, { cache: "no-store" });
+    const [res, orderMap] = await Promise.all([
+      fetch(SHEET_JSON_URL, { cache: "no-store" }),
+      loadCategoryOrder(),
+    ]);
     if (!res.ok) throw new Error("Respuesta no OK");
     const rows = await res.json();
+    categoryOrderMap = orderMap;
 
     PRODUCTS = rows.map(row => {
-      const get = key => {
-        const found = Object.keys(row).find(k => k.trim().toLowerCase() === key);
-        return found ? String(row[found]).trim() : "";
-      };
+      const get = rowGetter(row);
+      const activo = get('activo').toLowerCase();
+      const isActive = !["false", "no", "0", "inactivo"].includes(activo);
+      const priority = Number(get('prioridad'));
+
       return {
         id:       get('id') || crypto.randomUUID(),
         name:     get('nombre'),
@@ -70,9 +131,13 @@ async function loadProducts() {
         brand:    get('marca')        || "",
         price:    Number(get('precio')) || 0,
         img:      get('foto'),
+        active:   isActive,
+        priority: priority > 0 ? priority : Infinity,
         fallback: SVG_FALLBACK,
       };
-    }).filter(p => p.name);
+    }).filter(p => p.name && p.active);
+
+    PRODUCTS.sort((a, b) => a.priority - b.priority);
 
     if (PRODUCTS.length === 0) {
       grid.innerHTML = '';
@@ -96,13 +161,17 @@ async function loadProducts() {
 /* ============================================================
    Filtrado
    ============================================================ */
+function normalizeText(str) {
+  return String(str).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 function getFiltered() {
-  const q = searchQuery.toLowerCase();
+  const q = normalizeText(searchQuery);
   return PRODUCTS.filter(p => {
     if (activeCat   !== "Todos" && p.cat    !== activeCat)   return false;
     if (activeSub   !== "Todas" && p.subcat !== activeSub)   return false;
     if (activeBrand !== "Todas" && p.brand  !== activeBrand) return false;
-    if (q && ![p.name, p.cat, p.subcat, p.brand].some(v => v.toLowerCase().includes(q))) return false;
+    if (q && ![p.name, p.cat, p.subcat, p.brand].some(v => normalizeText(v).includes(q))) return false;
     return true;
   });
 }
@@ -117,9 +186,20 @@ function renderAll() {
   renderGrid();
 }
 
+function categoryRank(cat) {
+  if (categoryOrderMap.has(cat)) return { tier: 0, order: categoryOrderMap.get(cat) };
+  const fallback = CATEGORY_ORDER.indexOf(cat);
+  return fallback === -1 ? { tier: 2, order: 0 } : { tier: 1, order: fallback };
+}
+
 function renderTabs() {
-  const cats = ["Todos", ...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))];
-  document.getElementById('tabs').innerHTML = cats.map(c =>
+  const cats = [...new Set(PRODUCTS.map(p => p.cat).filter(Boolean))];
+  cats.sort((a, b) => {
+    const ra = categoryRank(a), rb = categoryRank(b);
+    return ra.tier - rb.tier || ra.order - rb.order;
+  });
+  const all = ["Todos", ...cats];
+  document.getElementById('tabs').innerHTML = all.map(c =>
     `<button class="tab${c === activeCat ? ' active' : ''}" data-val="${escapeHtml(c)}">${escapeHtml(c)}</button>`
   ).join('');
 }
@@ -277,6 +357,14 @@ function initListeners() {
   document.getElementById('filterSheetClear').addEventListener('click', clearSheetFilters);
   document.getElementById('filterSheetApply').addEventListener('click', applyFilters);
 
+  /* Búsqueda de marca dentro del sheet — solo repinta la lista, no el input */
+  document.getElementById('filterSheetBody').addEventListener('input', e => {
+    if (e.target.id !== 'brandSearchInput') return;
+    brandSearchQuery = e.target.value;
+    const list = document.getElementById('brandOptionsList');
+    if (list) list.innerHTML = renderBrandOptionsHtml(currentBrandOptions);
+  });
+
   /* Cambios de radio dentro del sheet */
   document.getElementById('filterSheetBody').addEventListener('change', e => {
     const radio = e.target.closest('input[type="radio"]');
@@ -284,6 +372,7 @@ function initListeners() {
     if (radio.name === 'subcat') {
       draftSub   = radio.value;
       draftBrand = "Todas";
+      brandSearchQuery = "";
     } else if (radio.name === 'brand') {
       draftBrand = radio.value;
     }
@@ -317,6 +406,7 @@ function openFilterSheet() {
   closeCart();
   draftSub   = activeSub;
   draftBrand = activeBrand;
+  brandSearchQuery = "";
   renderFilterSheet();
   document.getElementById('filterSheet').classList.add('open');
   document.getElementById('filterOverlay').classList.add('open');
@@ -370,15 +460,18 @@ function renderFilterSheet() {
   }
 
   if (brands.length > 0) {
+    currentBrandOptions = brands;
     html += `<div class="filter-section">
       <div class="filter-section-title">Marca</div>
-      ${["Todas", ...brands].map(b => `
-        <label class="filter-option${draftBrand === b ? ' selected' : ''}">
-          <input type="radio" name="brand" value="${escapeHtml(b)}" ${draftBrand === b ? 'checked' : ''}>
-          <span>${escapeHtml(b)}</span>
-          <span class="filter-option-check"></span>
-        </label>`).join('')}
+      ${brands.length > 8 ? `
+        <div class="filter-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="brandSearchInput" class="filter-search-input" placeholder="Buscar marca…" autocomplete="off" value="${escapeHtml(brandSearchQuery)}">
+        </div>` : ''}
+      <div id="brandOptionsList">${renderBrandOptionsHtml(brands)}</div>
     </div>`;
+  } else {
+    currentBrandOptions = [];
   }
 
   if (!html) {
@@ -387,6 +480,23 @@ function renderFilterSheet() {
 
   document.getElementById('filterSheetBody').innerHTML = html;
   updateApplyButton();
+}
+
+function renderBrandOptionsHtml(brands) {
+  const q = normalizeText(brandSearchQuery);
+  const filtered = q ? brands.filter(b => normalizeText(b).includes(q)) : brands;
+
+  const options = ["Todas", ...filtered].map(b => `
+    <label class="filter-option${draftBrand === b ? ' selected' : ''}">
+      <input type="radio" name="brand" value="${escapeHtml(b)}" ${draftBrand === b ? 'checked' : ''}>
+      <span>${escapeHtml(b)}</span>
+      <span class="filter-option-check"></span>
+    </label>`).join('');
+
+  if (filtered.length === 0) {
+    return options + `<p class="filter-empty">Sin resultados para "${escapeHtml(brandSearchQuery)}".</p>`;
+  }
+  return options;
 }
 
 function updateApplyButton() {

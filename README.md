@@ -25,7 +25,7 @@ const SHEET_JSON_URL = "https://opensheet.elk.sh/TU_SHEET_ID/1";
 ### Catálogo (Google Sheets)
 
 1. Crea un Google Sheet con estas columnas exactas en la fila 1:
-   `id | nombre | categoria | precio | foto`
+   `id | nombre | categoria | subcategoria | marca | precio | foto | activo | prioridad`
 2. Comparte la hoja: botón "Compartir" → acceso general
    **"Cualquier persona con el enlace" → Lector**.
 3. Copia el ID de tu hoja (la parte larga en la URL, entre `/d/` y `/edit`).
@@ -35,9 +35,38 @@ const SHEET_JSON_URL = "https://opensheet.elk.sh/TU_SHEET_ID/1";
 6. Para las fotos: sube cada imagen a [imgur.com](https://imgur.com) (gratis,
    sin cuenta) y pega el link directo en la columna `foto`. Si la dejas
    vacía, se muestra un ícono como respaldo.
+7. La columna `activo` es opcional: dejala vacía o escribí `true` para que
+   el producto se muestre en la tienda; escribí `false` para ocultarlo sin
+   tener que borrar la fila.
+8. La columna `prioridad` es opcional: escribí 1 en el producto que querés
+   que se vea primero, 2 en el segundo, etc. Los productos sin número
+   quedan después, en su orden habitual dentro de cada categoría/búsqueda.
 
 Cada vez que edites la hoja, la tienda se actualiza sola (el servicio
 opensheet cachea hasta 30 segundos).
+
+### Orden de las pestañas de categoría (sin tocar código)
+
+Por defecto las categorías aparecen en un orden fijo definido en
+`js/app.js` (`CATEGORY_ORDER`). Para cambiarlo vos misma, sin editar
+código, cada vez que agregues una categoría nueva:
+
+1. En el mismo Google Sheet, creá una pestaña nueva llamada exactamente
+   **`categorias`** (abajo, donde están las demás pestañas del archivo).
+2. Ponele estas columnas en la fila 1: `categoria | orden`.
+3. Agregá una fila por cada categoría, con el número de orden que
+   quieras (1 = aparece primera, 2 = segunda, etc.):
+
+   | categoria       | orden |
+   | --------------- | ----- |
+   | Cuidado Capilar | 1     |
+   | Maquillaje      | 2     |
+   | Uñas            | 3     |
+
+4. Como la pestaña ya comparte el mismo archivo, no hace falta compartirla
+   de nuevo. La tienda la lee sola en cuanto guardás.
+5. Cualquier categoría que no esté en esta pestaña aparece al final,
+   siguiendo el orden de respaldo de `CATEGORY_ORDER` en el código.
 
 ## Correr localmente en VS Code
 
