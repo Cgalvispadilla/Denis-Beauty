@@ -402,6 +402,7 @@ header {
 .filter-search-input::placeholder { color: var(--cocoa); opacity: 0.6; }
 
 .filter-option {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -417,7 +418,27 @@ header {
 }
 .filter-option:hover { background: rgba(58, 30, 30, 0.045); }
 .filter-option.selected { background: rgba(196, 114, 114, 0.1); color: var(--rose-deep); font-weight: 700; }
-.filter-option input[type="radio"] { display: none; }
+/* Oculto visualmente pero enfocable — a diferencia de display:none, esto
+   mantiene el radio en el orden de tabulación para navegación por teclado
+   y lectores de pantalla. */
+.filter-option input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.filter-option input[type="radio"]:focus-visible {
+  outline: none; /* el indicador de foco se dibuja en .filter-option-check, no en el input de 1px */
+}
+.filter-option input[type="radio"]:focus-visible ~ .filter-option-check {
+  outline: 2px solid var(--rose-deep);
+  outline-offset: 2px;
+}
 .filter-option-check {
   width: 20px;
   height: 20px;
